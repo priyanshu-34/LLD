@@ -1,0 +1,22 @@
+
+#requirements
+
+- Add text to the document
+- Add image to the document
+- Render the document as as single string
+- Save the document 
+
+
+
+Your questions before you code
+
+Answer these in your own words. Don't look anything up:
+
+What are the nouns in the requirements above? List every entity you can spot. (This is the crudest possible way to find classes, and it's still where everyone starts.)
+
+If I ask you to store text and images in one document, what data structure holds them, and what's the type of that structure in TypeScript? What problem do you immediately hit? 
+->ans : 
+
+render() needs to turn text into "hello" and an image into something like [Image: cat.png]. Where does that decision live in the simplest possible version?
+
+Suppose the naive version works. Tomorrow the PM asks for tables, video embeds, and newlines. Which lines of your code get touched? Take a guess before writing anything.
