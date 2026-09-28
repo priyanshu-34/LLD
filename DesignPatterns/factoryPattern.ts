@@ -98,10 +98,12 @@ namespace Stage0_NoFactory {
  *
  * TWO DETAILS THAT MATTER (both easy to get wrong):
  *   a) The parameter is a UNION TYPE ("s3" | "gcs"), not `string`. With
- *      `string`, TypeScript assumes someone could pass "azure", the switch
- *      falls through, the return type silently becomes `... | undefined`,
- *      and every caller is forced to write `createStorage("s3")?.upload(...)`.
- *      That `?.` is the compiler telling you the parameter type is too wide.
+ *      `string`, TypeScript assumes someone could pass "azure" and the switch
+ *      can fall through. With the return type declared (b), that is a compile
+ *      error (TS2366). Without it, the return type silently becomes
+ *      `... | undefined` and every caller is forced to write
+ *      `createStorage("s3")?.upload(...)`. Either way, the compiler is telling
+ *      you the parameter type is too wide.
  *   b) The RETURN TYPE is declared as the interface. Without it, TypeScript
  *      infers `S3Storage | GcsStorage` and leaks the concrete classes to the
  *      caller — which defeats the entire point of having a factory.
@@ -252,11 +254,15 @@ namespace Stage2_ConfigDriven {
  * Adding a provider = new class + one register() call + a config block.
  * ZERO edits to createStorage(). That is "open for extension, closed for
  * modification" — same idea as ../SOLID/OCP.ts, now with a reason to exist.
+ * (In this single file you still edit the Provider union and the config. Only
+ * the switch is gone. Split into modules, the config would come from outside.)
  *
  * THE PRICE YOU PAY: the registry is open, so TypeScript can no longer prove
- * the lookup will find anything. `registry[name]` may be undefined and you
- * need a runtime guard. Stage 2's switch had that guarantee for free. You
- * traded compile-time safety for extensibility — a real cost, not a free win.
+ * the lookup will find anything. `registry[name]` may be undefined at runtime,
+ * yet `Record<string, Creator>` types it as `Creator`, so the compiler WON'T
+ * warn you (only `noUncheckedIndexedAccess` would). The runtime guard is on
+ * you. Stage 2's switch had that guarantee for free. You traded compile-time
+ * safety for extensibility — a real cost, not a free win.
  */
 namespace Stage3_Registry {
 
@@ -309,7 +315,7 @@ namespace Stage3_Registry {
     // — that is what lets these functions live in another file later.
     type Creator = (cfg: any) => StorageProvider;
 
-    // Starts EMPTY. This file lists no vendors.
+    // Starts EMPTY. The registry itself names no vendors.
     const registry: Record<string, Creator> = {};
 
     // All it does is put a key in the object.
@@ -457,7 +463,10 @@ namespace Stage4_AbstractFactory {
         console.log("  " + factory.createUrlSigner().sign("/reports/2026/report.pdf"));
 
         // Flip config.provider to "gcs" and BOTH lines switch together.
-        // There is no way to get an S3 uploader and a GCS signer.
+        // Through getStorageFactory() there is no way to get an S3 uploader
+        // and a GCS signer. (Calling `new S3Factory` / `new GcsFactory`
+        // directly bypasses that — keep the concrete factories unexported in
+        // a real module.)
     }
 }
 
@@ -533,8 +542,9 @@ namespace Stage5_FactoryMethod {
 
 
 /* ============================================================================
- * RUN EVERYTHING — also serves as the self-check. If a stage breaks, its line
- * stops printing.
+ * RUN EVERYTHING — a runtime smoke check. If a stage throws, it and every
+ * stage after it stop printing. `tsx` does NOT type-check, so the type claims
+ * above are only verified by:  npx tsc --noEmit --strict factoryPattern.ts
  * ============================================================================ */
 Stage0_NoFactory.demo();
 Stage1_SimpleFactory.demo();
